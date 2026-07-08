@@ -18,6 +18,15 @@ or rewrite any part of it. So instead of "here's the whole image, roughly," you 
 that reference's lighting and setting, and nothing else**." Pair it with an abliterated encoder (below)
 and nothing refuses or quietly softens your intent — total control end to end.
 
+![Krea Reason vs a standard image reference](https://raw.githubusercontent.com/shootthesound/ComfyUI-KreaReason/main/images/krea_reason_vs_standard_ref.png)
+
+*Same reference image (a cowboy by a campfire at desert sunset) and the same prompt — "a victorian
+magician releasing a Ferrari F40 out of a magical box, ethereal." **Left (Krea Reason,
+`people + main subject (keep the scene)`):** the magician and the Ferrari, dropped into the reference's
+desert-sunset setting — the cowboy is gone, exactly as asked. **Right (standard image reference):** the
+reference's cowboy is dragged into the output and fights the prompt, so you get a gunslinger instead of
+a magician.*
+
 ## Node: `Krea Reason (expand prompt + encode)` (category `ShootTheSound/KreaReason`)
 
 **Text mode** — type a prompt and it expands it into a detailed one, then encodes:
