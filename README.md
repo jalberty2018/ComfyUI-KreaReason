@@ -27,6 +27,37 @@ desert-sunset setting — the cowboy is gone, exactly as asked. **Right (standar
 reference's cowboy is dragged into the output and fights the prompt, so you get a gunslinger instead of
 a magician.*
 
+## Install
+
+**ComfyUI-Manager** (once it appears in the registry index): open **Manager → Custom Nodes Manager**,
+search **"Krea Reason"**, click **Install**, then restart ComfyUI.
+
+**Manual (git clone):** drop it into your `custom_nodes` folder and restart —
+
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/shootthesound/ComfyUI-KreaReason
+```
+
+There are **no extra Python dependencies** — it rides on ComfyUI's built-in Krea 2 support. Restart
+ComfyUI (a full restart, not just a browser refresh) after installing, and the node appears under
+**`ShootTheSound/KreaReason`**. Drag `workflows/Krea Reason vs Standard Image Ref.json` onto the canvas
+to get going.
+
+### Models (Krea 2)
+
+Load the encoder with a **CLIPLoader set to type `krea2`**. Everything below goes in the usual
+ComfyUI model folders:
+
+| Slot | File | Folder |
+|---|---|---|
+| Text encoder | **abliterated** Qwen3-VL-4B (recommended — see below) *or* stock `qwen3vl_4b_bf16` / `qwen3vl_4b_fp8_scaled` | `models/text_encoders/` |
+| Diffusion model | `krea2_turbo_fp8_scaled.safetensors` | `models/diffusion_models/` |
+| VAE | a **Wan 2.1** VAE, e.g. `wan_2.1_vae.safetensors` (see Notes) | `models/vae/` |
+
+The Krea 2 model files are on [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2); the
+recommended abliterated encoder is linked in the section below.
+
 ## Node: `Krea Reason (expand prompt + encode)` (category `ShootTheSound/KreaReason`)
 
 **Text mode** — type a prompt and it expands it into a detailed one, then encodes:
