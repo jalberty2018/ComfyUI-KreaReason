@@ -81,78 +81,6 @@
       ]
     },
     {
-      "id": 4,
-      "type": "KreaReason",
-      "pos": [
-        60.28424350991601,
-        -178.37219689807253
-      ],
-      "size": [
-        436.4914522898756,
-        530.9487137392537
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 1
-        },
-        {
-          "name": "image",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 24
-        },
-        {
-          "name": "prompt",
-          "type": "STRING",
-          "widget": {
-            "name": "prompt"
-          },
-          "link": 68
-        }
-      ],
-      "outputs": [
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "slot_index": 0,
-          "links": [
-            35,
-            63
-          ]
-        },
-        {
-          "name": "generated_text",
-          "type": "STRING",
-          "slot_index": 1,
-          "links": [
-            14
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "KreaReason"
-      },
-      "widgets_values": [
-        "",
-        "think",
-        220,
-        1.26,
-        858303657820676,
-        "fixed",
-        "people + main subject (keep the scene)",
-        "",
-        1,
-        "",
-        0.9,
-        7.1
-      ]
-    },
-    {
       "id": 20,
       "type": "KSamplerAdvanced",
       "pos": [
@@ -307,7 +235,7 @@
         106
       ],
       "flags": {},
-      "order": 9,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -350,7 +278,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 7,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -776,40 +704,6 @@
       ]
     },
     {
-      "id": 28,
-      "type": "Text Multiline",
-      "pos": [
-        -1320.2620620941154,
-        653.0524633327433
-      ],
-      "size": [
-        412.5804249052385,
-        199.25997500557423
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            68,
-            77
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "was-ns",
-        "ver": "3.0.1",
-        "Node name for S&R": "Text Multiline"
-      },
-      "widgets_values": [
-        "a victorian magician releasing a ferrari f40 out of a magical box, ethereal"
-      ]
-    },
-    {
       "id": 3,
       "type": "VAELoader",
       "pos": [
@@ -821,7 +715,7 @@
         58
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -856,7 +750,7 @@
         108.22007498327736
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -894,7 +788,7 @@
         95.92019995540636
       ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -958,15 +852,15 @@
       "id": 16,
       "type": "LoadImage",
       "pos": [
-        -293.20724441631995,
-        -168.67743699501096
+        1915.2029279307246,
+        -372.06366592594253
       ],
       "size": [
-        282.798828125,
-        314.0000000000001
+        1037.1492443837496,
+        423.13969142969813
       ],
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -992,6 +886,112 @@
       "widgets_values": [
         "ref.png",
         "image"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "Text Multiline",
+      "pos": [
+        2983.412619286966,
+        -254.87249349596902
+      ],
+      "size": [
+        556.0822417900199,
+        115.09064010200063
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            68,
+            77
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "was-ns",
+        "ver": "3.0.1",
+        "Node name for S&R": "Text Multiline"
+      },
+      "widgets_values": [
+        "a victorian magician releasing a ferrari f40 out of a magical box, ethereal"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "KreaReason",
+      "pos": [
+        60.28424350991601,
+        -178.37219689807253
+      ],
+      "size": [
+        436.4914522898756,
+        530.9487137392537
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 24
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 68
+        }
+      ],
+      "outputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            35,
+            63
+          ]
+        },
+        {
+          "name": "generated_text",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KreaReason"
+      },
+      "widgets_values": [
+        "",
+        "think",
+        220,
+        1.26,
+        858303657820676,
+        "fixed",
+        "people + main subject (keep the scene)",
+        "",
+        1,
+        "",
+        0.9,
+        1
       ]
     }
   ],
@@ -1233,10 +1233,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.3073560549142826,
+      "scale": 0.49500000000000544,
       "offset": [
-        2756.9138291042677,
-        1739.7006094170831
+        3196.4969411704633,
+        1365.6603134684392
       ]
     },
     "frontendVersion": "1.45.19",
