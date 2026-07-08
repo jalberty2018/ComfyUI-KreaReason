@@ -7,6 +7,17 @@ and image-reference tool. Krea 2's "CLIP" is a full vision-language model with a
 so it can **rewrite a short prompt into a rich one**, or **read a reference image and write the
 prompt from it**, *before* conditioning — all on the exact model that conditions, no second LLM.
 
+**Why this gives you more control than the standard image-reference flow.** The usual path — Krea's
+own describe-and-encode, or embedding-based adapters — hands you whatever the model decides is
+important (usually the person or main subject) as a black box you can't steer, and you take it whole.
+Krea Reason breaks the reference into three **visible, editable** steps: it **describes** the image,
+lets you **surgically remove exactly what you don't want** (people, the main subject, everything
+except the background/style/colors/composition…), then **combines** what's left with your prompt —
+with *your prompt leading*. You see the exact text that becomes your conditioning and can keep, drop,
+or rewrite any part of it. So instead of "here's the whole image, roughly," you get "**my subject, in
+that reference's lighting and setting, and nothing else**." Pair it with an abliterated encoder (below)
+and nothing refuses or quietly softens your intent — total control end to end.
+
 ## Node: `Krea Reason (expand prompt + encode)` (category `ShootTheSound/KreaReason`)
 
 **Text mode** — type a prompt and it expands it into a detailed one, then encodes:
