@@ -5,9 +5,48 @@ prompt into a rich one — or read a reference image and write the prompt from i
 conditioning. One node, running on the exact model that conditions, no second LLM needed.
 """
 
+from contextlib import contextmanager
+from functools import partial
+import threading
+
 import torch
 
 CATEGORY = "ShootTheSound/KreaReason"
+_GENERATION_LOCK = threading.RLock()
+
+
+@contextmanager
+def _generation_context(clip, backend):
+    """Use the eager Qwen cache without changing ComfyUI's global settings.
+
+    CLIP clones share their underlying model. Restore instance attributes even on
+    failure, and serialize KreaReason calls while those attributes are changed.
+    """
+    if backend not in ("compatible", "native"):
+        raise ValueError(f"[KreaReason] Unknown generation backend: {backend}")
+    encoder = getattr(getattr(clip, "cond_stage_model", None), "qwen3vl_4b", None)
+    model = getattr(getattr(encoder, "transformer", None), "model", None)
+    if model is None:
+        raise ValueError("[KreaReason] Load a Qwen3-VL-4B encoder with CLIPLoader type 'krea2'.")
+    names = ("fixed_kv", "graph_dynamic_vbar_blocks", "prefetch_dynamic_vbars")
+    with _GENERATION_LOCK:
+        saved = {}
+        try:
+            if backend == "compatible":
+                for name in names:
+                    if not hasattr(model, name):
+                        raise RuntimeError(
+                            f"[KreaReason] Unsupported ComfyUI generation API: missing {name}. "
+                            "Update KreaReason or use the native backend to test this ComfyUI build.")
+                    saved[name] = (name in vars(model), getattr(model, name))
+                    setattr(model, name, False)
+            yield model
+        finally:
+            for name, (owned, value) in saved.items():
+                if owned:
+                    setattr(model, name, value)
+                else:
+                    delattr(model, name)
 
 
 def _esc(s):
@@ -135,7 +174,8 @@ def _filter_instruction(clause):
             "was removed and do not invent new details. No preamble.")
 
 
-def _generate_text(clip, prompt, instruction, max_new_tokens, temperature, top_p, seed, image=None):
+def _generate_text(clip, prompt, instruction, max_new_tokens, temperature, top_p, seed, image=None,
+                   generation_backend="compatible"):
     """Run the Krea 2 encoder's own LLM to expand `prompt` under `instruction`. Returns text.
 
     Uses the CLIP's generate()/decode() (Qwen3-VL-4B has a real tied LM head, so this is genuine
@@ -146,19 +186,32 @@ def _generate_text(clip, prompt, instruction, max_new_tokens, temperature, top_p
     if image is not None:
         tmpl = ("<|im_start|>system\n" + _esc(instr) + "<|im_end|>\n"
                 "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>{}<|im_end|>\n<|im_start|>assistant\n")
-        tokens = clip.tokenize(prompt, image=image, llama_template=tmpl)
+        tokens = clip.tokenize(prompt, image=image, llama_template=tmpl, thinking=False)
     else:
         tmpl = ("<|im_start|>system\n" + _esc(instr) + "<|im_end|>\n"
                 "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n")
-        tokens = clip.tokenize(prompt, llama_template=tmpl)
+        tokens = clip.tokenize(prompt, llama_template=tmpl, thinking=False)
     do_sample = float(temperature) > 0.0
-    ids = clip.generate(
-        tokens, do_sample=do_sample, max_length=int(max_new_tokens),
-        temperature=float(temperature) if do_sample else 1.0,
-        top_k=64, top_p=float(top_p), min_p=0.0, repetition_penalty=1.05,
-        presence_penalty=0.0, seed=int(seed),
-    )
-    return " ".join(clip.decode(ids).split()).strip()
+    try:
+        with _generation_context(clip, generation_backend), torch.inference_mode():
+            ids = clip.generate(
+                tokens, do_sample=do_sample, max_length=int(max_new_tokens),
+                temperature=float(temperature) if do_sample else 1.0,
+                top_k=64, top_p=float(top_p), min_p=0.0, repetition_penalty=1.05,
+                presence_penalty=0.0, seed=int(seed),
+            )
+    except RuntimeError as ex:
+        if any(marker in str(ex).lower() for marker in
+               ("device-side assert", "index out of bounds", "illegal memory access")):
+            raise RuntimeError(
+                "[KreaReason] CUDA generation failed. Restart ComfyUI before retrying; "
+                "the CUDA context may be invalid. Use generation_backend='compatible'. "
+                f"Original error: {ex}") from ex
+        raise
+    text = " ".join(clip.decode(ids).split()).strip()
+    if not text:
+        raise RuntimeError("[KreaReason] Generation returned empty text; conditioning was not created.")
+    return text
 
 
 class KreaReason:
@@ -179,8 +232,7 @@ class KreaReason:
     DESCRIBES the image in full; (2) a text pass FILTERS that description, removing the elements
     `image_remove` selects (people, subject, background, or "everything except <aspect>"); (3) a
     text pass COMBINES the filtered description with the user's prompt. Vision runs on both the bf16
-    and (on ComfyUI) the fp8_scaled encoder; if a build can't run the vision tower the node raises a
-    clear error suggesting bf16. `image_megapixels` caps the reference resolution. Costs 3 generations,
+    and (on ComfyUI) the fp8_scaled encoder; generation errors preserve the underlying cause. `image_megapixels` caps the reference resolution. Costs 3 generations,
     so it's slower — a quality path, not a live dial.
 
     `cond_boost` multiplies the output conditioning (a CFG-free guidance boost; ~1.5-4x often sharpens
@@ -212,6 +264,8 @@ class KreaReason:
                 "top_p": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "cond_boost": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 8.0, "step": 0.1,
                                          "tooltip": "Multiply the output conditioning (CFG-free guidance boost). 1.0 = off; ~1.5-4x often sharpens Krea 2; saturates past ~6-8x. Sweep by eye"}),
+                "generation_backend": (["compatible", "native"], {"default": "compatible",
+                                        "tooltip": "compatible: eager Qwen generation for ComfyUI 0.38+. native: use ComfyUI optimizations (for comparison)."}),
             },
         }
 
@@ -222,7 +276,9 @@ class KreaReason:
 
     def reason(self, clip, prompt, mode, max_new_tokens, temperature, seed, image=None,
                image_remove="people + main subject (keep the scene)", custom_image_instruction="",
-               image_megapixels=1.0, instruction="", top_p=0.95, cond_boost=1.0):
+               image_megapixels=1.0, instruction="", top_p=0.95, cond_boost=1.0,
+               generation_backend="compatible"):
+        generate = partial(_generate_text, generation_backend=generation_backend)
         has_img = image is not None
         up = (prompt or "").strip()
         if not up and not has_img:
@@ -232,13 +288,12 @@ class KreaReason:
             img = _cap_image_tensor(image, image_megapixels)
             # Pass 1 (vision): full, faithful description of the image
             try:
-                desc = _generate_text(clip, "Describe this image in complete detail.",
+                desc = generate(clip, "Describe this image in complete detail.",
                                       DESCRIBE_FULL_INSTRUCTION, max_new_tokens, temperature, top_p, seed, image=img)
-            except Exception as ex:
+            except RuntimeError as ex:
                 raise RuntimeError(
-                    "[KreaReason] vision path failed — this encoder build couldn't run the "
-                    "Qwen3-VL vision tower. Try the bf16 encoder (qwen3vl_4b_bf16). "
-                    f"Underlying error: {ex}")
+                    "[KreaReason] Image-description pass failed. "
+                    f"Underlying error: {ex}") from ex
             if not desc:
                 raise RuntimeError("[KreaReason] the vision model returned no description")
 
@@ -248,7 +303,7 @@ class KreaReason:
             else:
                 clause = REMOVE_TARGETS.get(image_remove)
             if clause:
-                filtered = _generate_text(clip, desc, _filter_instruction(clause),
+                filtered = generate(clip, desc, _filter_instruction(clause),
                                           max_new_tokens, temperature, top_p, seed)
             else:
                 filtered = desc  # "nothing" / empty custom -> keep the full description
@@ -256,7 +311,7 @@ class KreaReason:
             # Pass 3 (text): combine the filtered reference with the user's prompt
             if up:
                 combine_in = f"User's prompt: {up}\n\nReference details: {filtered}"
-                text = _generate_text(clip, combine_in, COMBINE_INSTRUCTION,
+                text = generate(clip, combine_in, COMBINE_INSTRUCTION,
                                       max_new_tokens, temperature, top_p, seed)
             else:
                 text = filtered  # no user prompt -> just use the filtered reference
@@ -265,10 +320,7 @@ class KreaReason:
                   f"describe {len(desc.split())}w -> filter {len(filtered.split())}w -> final {len(text.split())}w\n{text}")
             cond = _encode(clip, text)
         else:
-            text = _generate_text(clip, prompt, instruction, max_new_tokens, temperature, top_p, seed)
-            if not text:
-                print("[KreaReason] generation returned empty — falling back to the raw prompt")
-                text = prompt
+            text = generate(clip, prompt, instruction, max_new_tokens, temperature, top_p, seed)
             print(f"[KreaReason] ({mode}) -> {len(text.split())} words:\n{text}")
             if mode == "think":
                 cond = _encode(clip, prompt, reasoning=text)

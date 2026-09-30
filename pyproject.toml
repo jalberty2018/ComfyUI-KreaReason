@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-kreareason"
 description = "Reason-then-encode for Krea 2. The encoder's own Qwen3-VL rewrites your prompt into a richer one — or reads a reference image (describe → filter → combine) — before conditioning: a built-in prompt enhancer and language-level image reference, running on the exact model that conditions."
-version = "1.0.1"
+version = "1.1.0"
 license = "MIT"
 authors = [
     { name = "Peter Neill" }

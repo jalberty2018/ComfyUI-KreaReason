@@ -1,5 +1,42 @@
 # ComfyUI-KreaReason
 
+## 1.1.0 — ComfyUI 0.38 compatibility
+
+The existing node name, sockets, and workflow inputs are preserved. The new optional
+`generation_backend` defaults to **compatible**, including for old workflows.
+
+- **compatible** uses ComfyUI's existing eager Qwen generation path. During each
+  generation call only, it disables the encoder's `fixed_kv`,
+  `graph_dynamic_vbar_blocks`, and `prefetch_dynamic_vbars` flags. These optimizations
+  were enabled for Qwen3-VL in ComfyUI 0.37. Original flags are restored before
+  conditioning, including when generation fails. Global launch settings are unchanged.
+- **native** uses ComfyUI's optimizations unchanged, for comparison or future fixes.
+- Generation explicitly requests `thinking=False`. Empty output fails before
+  conditioning, and CUDA index/assert errors request a restart without an unsafe retry.
+- Image-pass errors retain their original cause instead of assuming a broken vision
+  tower or recommending a different checkpoint for every failure.
+
+This is a targeted workaround for the suspected generation regression, not a proven
+diagnosis of every CUDA index error. It may be slower. Meaningless but nonempty text
+cannot be reliably detected automatically; inspect `generated_text`.
+
+The implementation was checked against ComfyUI **v0.38.0 source** and tested with
+CPU-only orchestration tests (mock encoder). Full GPU generation with bf16/fp8
+weights has **not** been validated here. Future ComfyUI versions are supported only
+while these APIs remain compatible; missing compatibility controls produce an
+explicit error. Model flags are shared by CLIP clones: KreaReason serializes its own
+generation calls, but unrelated concurrent calls using the same encoder are not covered.
+
+Install/update this entire folder under `ComfyUI/custom_nodes/ComfyUI-KreaReason`,
+restart ComfyUI, and leave `generation_backend=compatible`. No extra dependencies.
+After a CUDA device assertion, fully restart the backend before testing again.
+
+GPU acceptance checks: run text expansion and all three reference-image passes,
+repeat with another seed and image resolution, then run ordinary Krea conditioning
+on the same CLIP. Compare `compatible` and `native` using identical inputs.
+
+Run orchestration tests: `python -m unittest discover -s tests -v`.
+
 <a href="https://buymeacoffee.com/lorasandlenses"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a>
 
 A single node that turns **Krea 2**'s text encoder (Qwen3-VL-4B) into a built-in prompt enhancer
@@ -109,9 +146,8 @@ prompt, without changing how it sees. Drop it in `models/text_encoders/` and loa
 ## Notes
 
 - **Encoder**: any Krea 2 Qwen3-VL-4B encoder loads with a **CLIPLoader set to type `krea2`**. The
-  stock bf16 (`qwen3vl_4b_bf16`), `fp8_scaled`, and the abliterated builds above all work — including
-  the vision/image path — on ComfyUI. If some build can't run the vision tower, the node raises a
-  clear error suggesting bf16.
+  stock bf16 (`qwen3vl_4b_bf16`), `fp8_scaled`, and the abliterated builds above are intended
+  encoder options. See the 1.1.0 validation limits above for ComfyUI 0.38+.
 - **VAE**: use a **Wan 2.1 VAE**, not the Qwen-Image VAE — Krea 2's latent format *is* Wan 2.1, and it
   decodes noticeably better here. Any Wan 2.1 variant works: `wan_2.1_vae.safetensors` (default),
   the **fp32** build (`Wan2_1_VAE_fp32.safetensors`) or bf16 build for a cleaner decode, or the **2×
